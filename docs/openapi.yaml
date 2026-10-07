@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info: {title: Product Inventory API, version: 1.0.0}
+servers: [{url: 'http://localhost:8000/api'}]
+paths:
+  /register:
+    post:
+      summary: Register and issue a Sanctum token
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RegisterRequest'}}}
+      responses: {'201': {description: Registered}, '422': {description: Validation error}}
+  /login:
+    post:
+      summary: Login and issue a Sanctum token
+      responses: {'200': {description: Authenticated}, '422': {description: Invalid credentials}}
+  /products:
+    get:
+      security: [{sanctum: []}]
+      summary: List, filter, and paginate products
+      parameters:
+        - {in: query, name: category_id, schema: {type: integer}}
+        - {in: query, name: min_price, schema: {type: number}}
+        - {in: query, name: max_price, schema: {type: number}}
+        - {in: query, name: stock_min, schema: {type: integer}}
+        - {in: query, name: stock_max, schema: {type: integer}}
+        - {in: query, name: stock_level, schema: {type: string, enum: [out_of_stock, low, in_stock]}}
+        - {in: query, name: per_page, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {description: Paginated product collection}}
+    post:
+      security: [{sanctum: []}]
+      summary: Create a product
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductInput'}}}
+      responses: {'201': {description: Product created}, '422': {description: Validation error}}
+  /products/{product}:
+    parameters:
+      - {in: path, name: product, required: true, schema: {type: integer}}
+    get:
+      security: [{sanctum: []}]
+      responses: {'200': {description: Product}, '404': {description: Not found}}
+    put:
+      security: [{sanctum: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductInput'}}}
+      responses: {'200': {description: Product updated}}
+    delete:
+      security: [{sanctum: []}]
+      responses: {'204': {description: Product soft-deleted}}
+components:
+  securitySchemes:
+    sanctum: {type: http, scheme: bearer}
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: {type: string}
+        email: {type: string, format: email}
+        password: {type: string, format: password, minLength: 8}
+        password_confirmation: {type: string, format: password}
+    ProductInput:
+      type: object
+      properties:
+        category_id: {type: integer}
+        name: {type: string}
+        sku: {type: string}
+        description: {type: string, nullable: true}
+        price: {type: number, minimum: 0}
+        stock: {type: integer, minimum: 0}
+        supplier_ids: {type: array, items: {type: integer}}
